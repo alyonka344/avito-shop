@@ -66,20 +66,34 @@ func main() {
 	}
 
 	userRepository := pg.NewPgUserRepository(db)
+	transactionRepository := pg.NewPgTransactionRepository(db)
+	purchaseRepository := pg.NewPgPurchaseRepository(db)
+	merchRepository := pg.NewPgMerchRepository(db)
 	authService := jwt.NewJWTService(secretKey)
 	hashService := bcrypt.NewHashService()
 
-	// Инициализируем usecase
 	authUsecase := implementations.NewAuthUsecase(userRepository, authService, hashService)
 
-	// Создаем тестового пользователя
+	transactionUsecase := implementations.NewTransactionUseCase(userRepository, transactionRepository)
+	purchaseUsecase := implementations.NewPurchaseUsecase(userRepository, merchRepository, purchaseRepository)
+
 	testUser := model.User{
 		Username: "alyonka",
 		Password: "password",
 	}
 
-	// Вызываем создание пользователя
+	testUser2 := model.User{
+		Username: "misha",
+		Password: "password2",
+	}
+
 	err = authUsecase.Register(&testUser)
+	err = authUsecase.Register(&testUser2)
+
+	err = transactionUsecase.TransferMoney(testUser.ID, testUser2.ID, 200)
+
+	err = purchaseUsecase.BuyMerch(testUser.ID, "book", 1)
+
 	if err != nil {
 		log.Fatalf("Failed to create user: %v", err)
 	}

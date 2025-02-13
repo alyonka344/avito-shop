@@ -7,5 +7,5 @@ import (
 
 type PurchaseRepository interface {
 	Create(purchase *model.Purchase) error
-	GetById(purchaseID uuid.UUID) (model.Purchase, error)
+	GetAllByUserId(userID uuid.UUID) ([]model.Purchase, error)
 }

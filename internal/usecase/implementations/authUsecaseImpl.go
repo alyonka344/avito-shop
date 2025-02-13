@@ -8,7 +8,7 @@ import (
 	"errors"
 )
 
-type authUseCase struct {
+type authUsecase struct {
 	userRepository repository.UserRepository
 	authService    auth.AuthService
 	hashService    auth.HashService
@@ -17,11 +17,11 @@ type authUseCase struct {
 func NewAuthUsecase(
 	userRepository repository.UserRepository,
 	authService auth.AuthService,
-	hashService auth.HashService) usecase.AuthUseCase {
-	return &authUseCase{userRepository: userRepository, authService: authService, hashService: hashService}
+	hashService auth.HashService) usecase.AuthUsecase {
+	return &authUsecase{userRepository: userRepository, authService: authService, hashService: hashService}
 }
 
-func (u *authUseCase) Register(user *model.User) error {
+func (u *authUsecase) Register(user *model.User) error {
 	hashedPassword, err := u.hashService.HashPassword(user.Password)
 	if err != nil {
 		return err
@@ -30,7 +30,7 @@ func (u *authUseCase) Register(user *model.User) error {
 	return u.userRepository.Create(user)
 }
 
-func (u *authUseCase) Login(name, password string) (string, error) {
+func (u *authUsecase) Login(name, password string) (string, error) {
 	user, err := u.userRepository.GetByName(name)
 	if err != nil {
 		return "", errors.New("invalid credentials")
@@ -40,10 +40,41 @@ func (u *authUseCase) Login(name, password string) (string, error) {
 		return "", errors.New("invalid credentials")
 	}
 
-	token, err := u.authService.GenerateToken(user)
+	token, err := u.authService.GenerateToken(*user)
 	if err != nil {
 		return "", err
 	}
 
 	return token, nil
+}
+
+func (u *authUsecase) ValidateOrCreateUser(username, password string) (model.User, error) {
+	exists, err := u.userRepository.ExistsByName(username)
+	if err != nil {
+		return model.User{}, err
+	}
+	if exists {
+		user, err := u.userRepository.GetByName(username)
+		if err == nil {
+			return *user, nil
+		}
+		return model.User{}, err
+	} else {
+
+		hashedPassword, err := u.hashService.HashPassword(password)
+		if err != nil {
+			return model.User{}, err
+		}
+
+		newUser := &model.User{
+			Username: username,
+			Password: hashedPassword,
+		}
+
+		if err := u.userRepository.Create(newUser); err != nil {
+			return model.User{}, err
+		}
+
+		return *newUser, err
+	}
 }

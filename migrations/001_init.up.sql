@@ -30,7 +30,6 @@ CREATE TABLE IF NOT EXISTS purchases
     id         UUID                     DEFAULT gen_random_uuid() PRIMARY KEY,
     user_id    UUID REFERENCES users (id) ON DELETE CASCADE,
     merch_name VARCHAR(255) REFERENCES merch (name) ON DELETE CASCADE,
-    quantity   INTEGER,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 

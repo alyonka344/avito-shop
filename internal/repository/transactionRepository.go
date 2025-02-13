@@ -7,5 +7,6 @@ import (
 
 type TransactionRepository interface {
 	Create(transaction *model.Transaction) error
-	GetAllByUserId(userID uuid.UUID) ([]model.Transaction, error)
+	GetAllSentByUserId(userID uuid.UUID) ([]model.Transaction, error)
+	GetAllReceivedByUserId(userID uuid.UUID) ([]model.Transaction, error)
 }

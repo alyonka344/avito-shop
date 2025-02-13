@@ -50,7 +50,7 @@ func (j *JwtService) ValidateToken(tokenStr string) (uuid.UUID, error) {
 
 	userID, err := uuid.FromString(userIDStr)
 	if err != nil {
-		return uuid.Nil, errors.New("invalid user_id") // Конвертируем строку обратно в UUID
+		return uuid.Nil, errors.New("invalid user_id")
 	}
 
 	return userID, nil
