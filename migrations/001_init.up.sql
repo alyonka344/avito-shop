@@ -2,8 +2,7 @@ CREATE TYPE status AS ENUM ('success', 'failure');
 
 CREATE TABLE IF NOT EXISTS users
 (
-    id       UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-    username VARCHAR(255) UNIQUE NOT NULL,
+    username VARCHAR(255) NOT NULL PRIMARY KEY,
     password VARCHAR(255) NOT NULL,
     balance  INTEGER      NOT NULL
 );
@@ -11,8 +10,8 @@ CREATE TABLE IF NOT EXISTS users
 CREATE TABLE IF NOT EXISTS transactions
 (
     id                 UUID                     DEFAULT gen_random_uuid() PRIMARY KEY,
-    from_user_id       UUID REFERENCES users (id) ON DELETE CASCADE,
-    to_user_id         UUID REFERENCES users (id) ON DELETE CASCADE,
+    from_user          VARCHAR(255) REFERENCES users (username) ON DELETE CASCADE,
+    to_user            VARCHAR(255) REFERENCES users (username) ON DELETE CASCADE,
     amount             INTEGER,
     created_at         TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     transaction_status status
@@ -28,7 +27,7 @@ CREATE TABLE IF NOT EXISTS merch
 CREATE TABLE IF NOT EXISTS purchases
 (
     id         UUID                     DEFAULT gen_random_uuid() PRIMARY KEY,
-    user_id    UUID REFERENCES users (id) ON DELETE CASCADE,
+    username   VARCHAR(255) REFERENCES users (username) ON DELETE CASCADE,
     merch_name VARCHAR(255) REFERENCES merch (name) ON DELETE CASCADE,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );

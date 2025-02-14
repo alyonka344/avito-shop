@@ -2,7 +2,9 @@ package controller
 
 import (
 	"avito-shop/internal/usecase"
+	"fmt"
 	"github.com/gin-gonic/gin"
+	"net/http"
 )
 
 type UserController struct {
@@ -13,15 +15,25 @@ func NewUserController(userUsecase usecase.UserUsecase) *UserController {
 	return &UserController{userUsecase: userUsecase}
 }
 
-type UserRequest struct {
-	MerchName string `json:"merch_name" binding:"required"`
-}
+func (uc *UserController) Info(c *gin.Context) {
+	userName, exists := c.Get("userName")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+		return
+	}
 
-type UserResponse struct {
-	Status  string `json:"status"`
-	Message string `json:"message"`
-}
+	strUserName, ok := userName.(string)
+	if !ok {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to parse username"})
+		return
+	}
 
-func (pc *UserController) Info(c *gin.Context) {
+	userInfo, err := uc.userUsecase.GetInfo(strUserName)
+	if err != nil {
+		fmt.Println(err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve user info"})
+		return
+	}
 
+	c.JSON(http.StatusOK, userInfo)
 }

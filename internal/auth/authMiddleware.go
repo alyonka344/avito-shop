@@ -6,19 +6,23 @@ import (
 	"net/http"
 )
 
+type AuthRequest struct {
+	Username string `json:"username" binding:"required"`
+	Password string `json:"password" binding:"required"`
+}
+
 func AuthMiddleware(authService AuthService, authUsecase usecase.AuthUsecase) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		tokenStr := c.GetHeader("Authorization")
 		if tokenStr == "" {
-			username := c.Query("username")
-			password := c.Query("password")
-
-			if username == "" || password == "" {
+			var req AuthRequest
+			if err := c.ShouldBindJSON(&req); err != nil {
 				c.JSON(http.StatusBadRequest, gin.H{"error": "Missing username or password"})
 				c.Abort()
 				return
 			}
-			user, err := authUsecase.ValidateOrCreateUser(username, password)
+
+			user, err := authUsecase.ValidateOrCreateUser(req.Username, req.Password)
 			if err != nil {
 				c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to validate or create user"})
 				c.Abort()
@@ -33,17 +37,18 @@ func AuthMiddleware(authService AuthService, authUsecase usecase.AuthUsecase) gi
 			}
 
 			c.JSON(http.StatusOK, gin.H{"token": token})
+			c.Abort()
 			return
 		}
 
-		userID, err := authService.ValidateToken(tokenStr)
+		userName, err := authService.ValidateToken(tokenStr)
 		if err != nil {
 			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid token"})
 			c.Abort()
 			return
 		}
 
-		c.Set("userID", userID)
+		c.Set("userName", userName)
 		c.Next()
 	}
 }

@@ -3,7 +3,6 @@ package controller
 import (
 	"avito-shop/internal/usecase"
 	"github.com/gin-gonic/gin"
-	"github.com/gofrs/uuid/v5"
 	"net/http"
 )
 
@@ -25,25 +24,21 @@ type PurchaseResponse struct {
 }
 
 func (pc *PurchaseController) Buy(c *gin.Context) {
-	var req PurchaseRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body"})
-		return
-	}
+	item := c.Param("item")
 
-	userID, exists := c.Get("userID")
+	userName, exists := c.Get("userName")
 	if !exists {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
 		return
 	}
 
-	uuidUserID, ok := userID.(uuid.UUID)
+	strUserName, ok := userName.(string)
 	if !ok {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to parse user ID"})
 		return
 	}
 
-	err := pc.purchaseUsecase.BuyMerch(uuidUserID, req.MerchName)
+	err := pc.purchaseUsecase.BuyMerch(strUserName, item)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to buy merch"})
 		return

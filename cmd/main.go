@@ -3,7 +3,7 @@ package main
 import (
 	"avito-shop/internal/auth/bcrypt"
 	"avito-shop/internal/auth/jwt"
-	"avito-shop/internal/model"
+	"avito-shop/internal/controller"
 	"avito-shop/internal/repository/pg"
 	"avito-shop/internal/usecase/implementations"
 	"avito-shop/seed"
@@ -25,6 +25,8 @@ func main() {
 	password := os.Getenv("DATABASE_PASSWORD")
 	dbname := os.Getenv("DATABASE_NAME")
 	secretKey := os.Getenv("SECRET_KEY")
+	serverPort := ":" + os.Getenv("SERVER_PORT")
+
 	fmt.Printf("host=%s port=%s user=%s password=%s dbname=%s sslmode=disable\n", host, port, user, password, dbname)
 	fmt.Println("new")
 
@@ -65,38 +67,21 @@ func main() {
 		log.Fatalf("merch did not upload: %s", err.Error())
 	}
 
-	userRepository := pg.NewPgUserRepository(db)
-	transactionRepository := pg.NewPgTransactionRepository(db)
-	purchaseRepository := pg.NewPgPurchaseRepository(db)
-	merchRepository := pg.NewPgMerchRepository(db)
+	userRepo := pg.NewPgUserRepository(db)
+	transactionRepo := pg.NewPgTransactionRepository(db)
+	purchaseRepo := pg.NewPgPurchaseRepository(db)
+	merchRepo := pg.NewPgMerchRepository(db)
 	authService := jwt.NewJWTService(secretKey)
 	hashService := bcrypt.NewHashService()
 
-	authUsecase := implementations.NewAuthUsecase(userRepository, authService, hashService)
+	authUsecase := implementations.NewAuthUsecase(userRepo, authService, hashService)
+	userUsecase := implementations.NewUserUsecase(userRepo, transactionRepo, purchaseRepo)
+	transactionUsecase := implementations.NewTransactionUseCase(userRepo, transactionRepo)
+	purchaseUsecase := implementations.NewPurchaseUsecase(userRepo, merchRepo, purchaseRepo)
 
-	transactionUsecase := implementations.NewTransactionUseCase(userRepository, transactionRepository)
-	purchaseUsecase := implementations.NewPurchaseUsecase(userRepository, merchRepository, purchaseRepository)
+	router := controller.SetupRouter(authUsecase, purchaseUsecase, transactionUsecase, userUsecase, authService)
 
-	testUser := model.User{
-		Username: "alyonka",
-		Password: "password",
+	if err := router.Run(serverPort); err != nil {
+		log.Fatalf("Failed to start server: %v", err)
 	}
-
-	testUser2 := model.User{
-		Username: "misha",
-		Password: "password2",
-	}
-
-	err = authUsecase.Register(&testUser)
-	err = authUsecase.Register(&testUser2)
-
-	err = transactionUsecase.TransferMoney(testUser.ID, testUser2.ID, 200)
-
-	err = purchaseUsecase.BuyMerch(testUser.ID, "book", 1)
-
-	if err != nil {
-		log.Fatalf("Failed to create user: %v", err)
-	}
-
-	fmt.Println("User successfully created!")
 }

@@ -1,6 +1,9 @@
 package usecase
 
+import (
+	"avito-shop/internal/model"
+)
+
 type UserUsecase interface {
-	//Create(user *model.User) error
-	//TransferMoney(senderID uuid.UUID, recipientID uuid.UUID, amount int) error
+	GetInfo(userName string) (*model.UserInfo, error)
 }

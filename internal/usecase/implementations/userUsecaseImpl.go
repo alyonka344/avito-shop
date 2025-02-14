@@ -1,50 +1,58 @@
 package implementations
 
 import (
+	"avito-shop/internal/mapper"
+	"avito-shop/internal/model"
 	"avito-shop/internal/repository"
 	"avito-shop/internal/usecase"
-	"github.com/gofrs/uuid/v5"
+	"fmt"
 )
 
 type userUsecase struct {
-	userRepository repository.UserRepository
+	userRepository        repository.UserRepository
+	transactionRepository repository.TransactionRepository
+	purchaseRepository    repository.PurchaseRepository
 }
 
-func NewUserUsecase(userRepository repository.UserRepository) usecase.UserUsecase {
-	return &userUsecase{userRepository: userRepository}
+func NewUserUsecase(
+	userRepository repository.UserRepository,
+	transactionRepository repository.TransactionRepository,
+	purhaseRepository repository.PurchaseRepository) usecase.UserUsecase {
+	return &userUsecase{
+		userRepository:        userRepository,
+		transactionRepository: transactionRepository,
+		purchaseRepository:    purhaseRepository}
 }
 
-func (u userUsecase) TransferMoney(senderID uuid.UUID, recipientID uuid.UUID, amount int) error {
-	//if amount <= 0 {
-	//	return errors.New("amount must be greater than zero")
-	//}
-	//
-	//transaction := model.Transaction{
-	//	ID:         uuid.Must(uuid.NewV4()),
-	//	FromUserID: senderID,
-	//	ToUserID:   recipientID,
-	//	Amount:     amount,
-	//	CreatedAt:  time.Now(),
-	//}
-	//
-	//err := u.userRepository.Transfer(senderID, recipientID, amount)
-	//if err != nil {
-	//	transaction.TransactionStatus = model.Failure
-	//	err = transactionRepo.LogTransaction(&transaction)
-	//	if err != nil {
-	//		return err
-	//	}
-	//	return err
-	//}
-	//
-	//err = uc.transactionRepo.LogTransaction(&transaction)
-	//if err != nil {
-	//	return err
-	//}
+func (u userUsecase) GetInfo(userName string) (*model.UserInfo, error) {
+	user, err := u.userRepository.GetByName(userName)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get user: %w", err)
+	}
 
-	return nil
+	sentTransactions, err := u.transactionRepository.GetAllSentByUserName(userName)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get sentTransactions: %w", err)
+	}
+
+	receivedTransactions, err := u.transactionRepository.GetAllReceivedByUserName(userName)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get receivedTransactions: %w", err)
+	}
+
+	inventory, err := u.purchaseRepository.GetAllByUserName(userName)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get inventory: %w", err)
+	}
+
+	userInfo := &model.UserInfo{
+		Coins:     user.Balance,
+		Inventory: mapper.MapInventory(inventory),
+		CoinHistory: model.CoinHistoryResponse{
+			Sent:     mapper.MapCoinTransactions(sentTransactions, true),
+			Received: mapper.MapCoinTransactions(receivedTransactions, false),
+		},
+	}
+
+	return userInfo, nil
 }
-
-//func (u *userUsecase) Create(user *model.User) error {
-//	return u.userRepository.Create(user)
-//}

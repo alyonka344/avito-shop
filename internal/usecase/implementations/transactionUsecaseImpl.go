@@ -14,27 +14,29 @@ type transactionUsecase struct {
 	transactionRepository repository.TransactionRepository
 }
 
-func NewTransactionUseCase(userRepo repository.UserRepository, transactionRepo repository.TransactionRepository) usecase.TransactionUsecase {
+func NewTransactionUseCase(
+	userRepo repository.UserRepository,
+	transactionRepo repository.TransactionRepository) usecase.TransactionUsecase {
 	return &transactionUsecase{
 		userRepository:        userRepo,
 		transactionRepository: transactionRepo,
 	}
 }
 
-func (t transactionUsecase) TransferMoney(senderID uuid.UUID, recipientID uuid.UUID, amount int) error {
+func (t transactionUsecase) TransferMoney(senderName string, recipientName string, amount int) error {
 	if amount <= 0 {
 		return errors.New("amount must be greater than zero")
 	}
 
 	transaction := model.Transaction{
-		ID:         uuid.Must(uuid.NewV4()),
-		FromUserID: senderID,
-		ToUserID:   recipientID,
-		Amount:     amount,
-		CreatedAt:  time.Now(),
+		ID:        uuid.Must(uuid.NewV4()),
+		FromUser:  senderName,
+		ToUser:    recipientName,
+		Amount:    amount,
+		CreatedAt: time.Now(),
 	}
 
-	err := t.userRepository.Transfer(senderID, recipientID, amount)
+	err := t.userRepository.Transfer(senderName, recipientName, amount)
 	if err != nil {
 		transaction.TransactionStatus = model.Failure
 		err = t.transactionRepository.Create(&transaction)

@@ -20,7 +20,6 @@ services:
       depends_on:
         db:
           condition: service_healthy
-      restart: on-failure:3
       networks:
         - internal
   

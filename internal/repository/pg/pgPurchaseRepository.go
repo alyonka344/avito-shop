@@ -4,7 +4,6 @@ import (
 	"avito-shop/internal/model"
 	"fmt"
 	"github.com/Masterminds/squirrel"
-	"github.com/gofrs/uuid/v5"
 	"github.com/jmoiron/sqlx"
 )
 
@@ -37,8 +36,8 @@ func (r PgPurchaseRepository) Create(purchase *model.Purchase) error {
 
 	query, args, err := squirrel.
 		Insert("purchases").
-		Columns("user_id", "merch_name", "created_at").
-		Values(purchase.UserID, purchase.MerchName, purchase.CreatedAt).
+		Columns("username", "merch_name", "created_at").
+		Values(purchase.UserName, purchase.MerchName, purchase.CreatedAt).
 		PlaceholderFormat(squirrel.Dollar).
 		Suffix("RETURNING id").
 		ToSql()
@@ -54,7 +53,7 @@ func (r PgPurchaseRepository) Create(purchase *model.Purchase) error {
 	return nil
 }
 
-func (r PgPurchaseRepository) GetAllByUserId(userID uuid.UUID) ([]model.Purchase, error) {
+func (r PgPurchaseRepository) GetAllByUserName(userName string) ([]model.Purchase, error) {
 	tx, err := r.db.Beginx()
 	if err != nil {
 		return nil, err
@@ -76,7 +75,7 @@ func (r PgPurchaseRepository) GetAllByUserId(userID uuid.UUID) ([]model.Purchase
 	query, args, err := squirrel.
 		Select("*").
 		From("purchases").
-		Where(squirrel.Eq{"user_id": userID}).
+		Where(squirrel.Eq{"username": userName}).
 		PlaceholderFormat(squirrel.Dollar).
 		ToSql()
 	if err != nil {

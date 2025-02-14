@@ -18,7 +18,10 @@ func NewAuthUsecase(
 	userRepository repository.UserRepository,
 	authService auth.AuthService,
 	hashService auth.HashService) usecase.AuthUsecase {
-	return &authUsecase{userRepository: userRepository, authService: authService, hashService: hashService}
+	return &authUsecase{
+		userRepository: userRepository,
+		authService:    authService,
+		hashService:    hashService}
 }
 
 func (u *authUsecase) Register(user *model.User) error {

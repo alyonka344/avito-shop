@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"github.com/Masterminds/squirrel"
-	"github.com/gofrs/uuid/v5"
 	"github.com/jmoiron/sqlx"
 )
 
@@ -43,60 +42,17 @@ func (r *PgUserRepository) Create(user *model.User) error {
 		Columns("username", "password", "balance").
 		Values(user.Username, user.Password, initialBalance).
 		PlaceholderFormat(squirrel.Dollar).
-		Suffix("RETURNING id").
 		ToSql()
 	if err != nil {
 		return fmt.Errorf("failed to build query: %w", err)
 	}
 
-	err = tx.QueryRowx(query, args...).Scan(&user.ID)
+	_, err = tx.Exec(query, args...)
 	if err != nil {
 		return fmt.Errorf("failed to execute query: %w", err)
 	}
 
 	return nil
-}
-
-func (r *PgUserRepository) GetById(userID uuid.UUID) (*model.User, error) {
-	tx, err := r.db.Beginx()
-	if err != nil {
-		return nil, err
-	}
-
-	defer func() {
-		var e error
-		if err == nil {
-			e = tx.Commit()
-		} else {
-			e = tx.Rollback()
-		}
-
-		if err == nil && e != nil {
-			err = fmt.Errorf("finishing transaction: %w", e)
-		}
-	}()
-
-	query, args, err := squirrel.
-		Select("*").
-		From("users").
-		Where(squirrel.Eq{"id": userID}).
-		PlaceholderFormat(squirrel.Dollar).
-		ToSql()
-	if err != nil {
-		return nil, fmt.Errorf("failed to build query: %w", err)
-	}
-
-	var users []model.User
-
-	err = tx.Select(&users, query, args...)
-	if err != nil {
-		return nil, fmt.Errorf("failed to execute query: %w", err)
-	}
-	if len(users) == 0 {
-		return nil, fmt.Errorf("this user is not exist: %w", err)
-	}
-
-	return &users[0], nil
 }
 
 func (r *PgUserRepository) GetByName(userName string) (*model.User, error) {
@@ -141,7 +97,7 @@ func (r *PgUserRepository) GetByName(userName string) (*model.User, error) {
 	return &users[0], nil
 }
 
-func (r *PgUserRepository) Transfer(senderID uuid.UUID, recipientID uuid.UUID, amount int) error {
+func (r *PgUserRepository) Transfer(senderName string, recipientName string, amount int) error {
 	tx, err := r.db.Beginx()
 	if err != nil {
 		return err
@@ -163,7 +119,7 @@ func (r *PgUserRepository) Transfer(senderID uuid.UUID, recipientID uuid.UUID, a
 	deductQuery, args, err := squirrel.
 		Update("users").
 		Set("balance", squirrel.Expr("balance - ?", amount)).
-		Where("id = ? AND balance >= ?", senderID, amount).
+		Where("username = ? AND balance >= ?", senderName, amount).
 		PlaceholderFormat(squirrel.Dollar).
 		ToSql()
 	if err != nil {
@@ -183,7 +139,7 @@ func (r *PgUserRepository) Transfer(senderID uuid.UUID, recipientID uuid.UUID, a
 	addQuery, args, err := squirrel.
 		Update("users").
 		Set("balance", squirrel.Expr("balance + ?", amount)).
-		Where(squirrel.Eq{"id": recipientID}).
+		Where(squirrel.Eq{"username": recipientName}).
 		PlaceholderFormat(squirrel.Dollar).
 		ToSql()
 	if err != nil {
@@ -198,7 +154,7 @@ func (r *PgUserRepository) Transfer(senderID uuid.UUID, recipientID uuid.UUID, a
 	return nil
 }
 
-func (r *PgUserRepository) UpdateBalance(userID uuid.UUID, amount int) error {
+func (r *PgUserRepository) UpdateBalance(userName string, amount int) error {
 	tx, err := r.db.Beginx()
 	if err != nil {
 		return err
@@ -220,7 +176,7 @@ func (r *PgUserRepository) UpdateBalance(userID uuid.UUID, amount int) error {
 	query, args, err := squirrel.
 		Update("users").
 		Set("balance", squirrel.Expr("balance + ?", amount)).
-		Where("id = ? AND balance >= ?", userID, -amount).
+		Where("username = ? AND balance >= ?", userName, -amount).
 		PlaceholderFormat(squirrel.Dollar).
 		ToSql()
 	if err != nil {
@@ -255,12 +211,16 @@ func (r *PgUserRepository) ExistsByName(userName string) (bool, error) {
 	}()
 
 	var exists bool
-	query := squirrel.Select("count(1) > 0").
+	query, args, err := squirrel.Select("count(1) > 0").
 		From("users").
-		Where(squirrel.Eq{"username": userName})
-	sql, args, _ := query.ToSql()
+		Where(squirrel.Eq{"username": userName}).
+		PlaceholderFormat(squirrel.Dollar).
+		ToSql()
+	if err != nil {
+		return false, fmt.Errorf("failed to build query: %w", err)
+	}
 
-	err = r.db.QueryRow(sql, args...).Scan(&exists)
+	err = r.db.QueryRow(query, args...).Scan(&exists)
 	if err != nil {
 		return false, err
 	}

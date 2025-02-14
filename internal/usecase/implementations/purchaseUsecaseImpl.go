@@ -5,7 +5,6 @@ import (
 	"avito-shop/internal/repository"
 	"avito-shop/internal/usecase"
 	"errors"
-	"github.com/gofrs/uuid/v5"
 )
 
 type purchaseUsecase struct {
@@ -25,13 +24,13 @@ func NewPurchaseUsecase(
 	}
 }
 
-func (p purchaseUsecase) BuyMerch(userID uuid.UUID, merchName string) error {
+func (p purchaseUsecase) BuyMerch(userName string, merchName string) error {
 	merch, err := p.merchRepository.GetByName(merchName)
 	if err != nil {
 		return err
 	}
 
-	user, err := p.userRepository.GetById(userID)
+	user, err := p.userRepository.GetByName(userName)
 	if err != nil {
 		return err
 	}
@@ -40,13 +39,13 @@ func (p purchaseUsecase) BuyMerch(userID uuid.UUID, merchName string) error {
 		return errors.New("insufficient balance")
 	}
 
-	err = p.userRepository.UpdateBalance(userID, -merch.Price)
+	err = p.userRepository.UpdateBalance(userName, -merch.Price)
 	if err != nil {
 		return err
 	}
 
 	purchase := model.Purchase{
-		UserID:    userID,
+		UserName:  userName,
 		MerchName: merchName,
 	}
 	return p.purchaseRepository.Create(&purchase)

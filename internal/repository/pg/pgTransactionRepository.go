@@ -4,7 +4,6 @@ import (
 	"avito-shop/internal/model"
 	"fmt"
 	"github.com/Masterminds/squirrel"
-	"github.com/gofrs/uuid/v5"
 	"github.com/jmoiron/sqlx"
 )
 
@@ -37,8 +36,8 @@ func (r PgTransactionRepository) Create(transaction *model.Transaction) error {
 
 	query, args, err := squirrel.
 		Insert("transactions").
-		Columns("from_user_id", "to_user_id", "amount", "transaction_status").
-		Values(transaction.FromUserID, transaction.ToUserID, transaction.Amount, transaction.TransactionStatus).
+		Columns("from_user", "to_user", "amount", "transaction_status").
+		Values(transaction.FromUser, transaction.ToUser, transaction.Amount, transaction.TransactionStatus).
 		PlaceholderFormat(squirrel.Dollar).
 		Suffix("RETURNING id").
 		ToSql()
@@ -54,7 +53,7 @@ func (r PgTransactionRepository) Create(transaction *model.Transaction) error {
 	return nil
 }
 
-func (r PgTransactionRepository) GetAllSentByUserId(userID uuid.UUID) ([]model.Transaction, error) {
+func (r PgTransactionRepository) GetAllSentByUserName(userName string) ([]model.Transaction, error) {
 	tx, err := r.db.Beginx()
 	if err != nil {
 		return nil, err
@@ -76,7 +75,7 @@ func (r PgTransactionRepository) GetAllSentByUserId(userID uuid.UUID) ([]model.T
 	query, args, err := squirrel.
 		Select("*").
 		From("transactions").
-		Where(squirrel.Eq{"from_user_id": userID}).
+		Where(squirrel.Eq{"from_user": userName}).
 		PlaceholderFormat(squirrel.Dollar).
 		ToSql()
 	if err != nil {
@@ -93,7 +92,7 @@ func (r PgTransactionRepository) GetAllSentByUserId(userID uuid.UUID) ([]model.T
 	return transactions, nil
 }
 
-func (r PgTransactionRepository) GetAllReceivedByUserId(userID uuid.UUID) ([]model.Transaction, error) {
+func (r PgTransactionRepository) GetAllReceivedByUserName(userName string) ([]model.Transaction, error) {
 	tx, err := r.db.Beginx()
 	if err != nil {
 		return nil, err
@@ -115,7 +114,7 @@ func (r PgTransactionRepository) GetAllReceivedByUserId(userID uuid.UUID) ([]mod
 	query, args, err := squirrel.
 		Select("*").
 		From("transactions").
-		Where(squirrel.Eq{"to_user_id": userID}).
+		Where(squirrel.Eq{"to_user": userName}).
 		PlaceholderFormat(squirrel.Dollar).
 		ToSql()
 	if err != nil {
