@@ -3,7 +3,6 @@ package jwt
 import (
 	"avito-shop/internal/model"
 	"errors"
-	"fmt"
 	"github.com/dgrijalva/jwt-go"
 	"strings"
 	"time"
@@ -33,28 +32,22 @@ func (j *JwtService) ValidateToken(tokenStr string) (string, error) {
 
 	token, err := jwt.Parse(tokenStr, func(token *jwt.Token) (interface{}, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
-			fmt.Println("a")
 			return nil, errors.New("unexpected signing method")
 		}
 		return []byte(j.secretKey), nil
 	})
 
 	if err != nil || !token.Valid {
-		fmt.Println(err)
-		fmt.Println(!token.Valid)
-		fmt.Println("b")
 		return "", err
 	}
 
 	claims, ok := token.Claims.(jwt.MapClaims)
 	if !ok {
-		fmt.Println("c")
 		return "", errors.New("invalid token claims")
 	}
 
 	userName, ok := claims["username"].(string)
 	if !ok {
-		fmt.Println("d")
 		return "", errors.New("invalid username")
 	}
 

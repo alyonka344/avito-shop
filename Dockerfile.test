@@ -1,0 +1,8 @@
+FROM golang:1.23
+
+WORKDIR ${GOPATH}/avito-shop/
+COPY . ${GOPATH}/avito-shop/
+
+EXPOSE 8081
+
+CMD ["sh", "-c", "go test ./tests/e2e_tests/... -v"]

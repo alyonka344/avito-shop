@@ -6,6 +6,5 @@ import (
 
 type AuthUsecase interface {
 	Login(email, password string) (string, error)
-	Register(user *model.User) error
 	ValidateOrCreateUser(username, password string) (model.User, error)
 }

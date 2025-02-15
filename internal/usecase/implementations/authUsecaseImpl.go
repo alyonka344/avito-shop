@@ -4,11 +4,11 @@ import (
 	"avito-shop/internal/auth"
 	"avito-shop/internal/model"
 	"avito-shop/internal/repository"
-	"avito-shop/internal/usecase"
 	"errors"
+	"fmt"
 )
 
-type authUsecase struct {
+type AuthUsecase struct {
 	userRepository repository.UserRepository
 	authService    auth.AuthService
 	hashService    auth.HashService
@@ -17,23 +17,14 @@ type authUsecase struct {
 func NewAuthUsecase(
 	userRepository repository.UserRepository,
 	authService auth.AuthService,
-	hashService auth.HashService) usecase.AuthUsecase {
-	return &authUsecase{
+	hashService auth.HashService) *AuthUsecase {
+	return &AuthUsecase{
 		userRepository: userRepository,
 		authService:    authService,
 		hashService:    hashService}
 }
 
-func (u *authUsecase) Register(user *model.User) error {
-	hashedPassword, err := u.hashService.HashPassword(user.Password)
-	if err != nil {
-		return err
-	}
-	user.Password = hashedPassword
-	return u.userRepository.Create(user)
-}
-
-func (u *authUsecase) Login(name, password string) (string, error) {
+func (u *AuthUsecase) Login(name, password string) (string, error) {
 	user, err := u.userRepository.GetByName(name)
 	if err != nil {
 		return "", errors.New("invalid credentials")
@@ -51,8 +42,9 @@ func (u *authUsecase) Login(name, password string) (string, error) {
 	return token, nil
 }
 
-func (u *authUsecase) ValidateOrCreateUser(username, password string) (model.User, error) {
+func (u *AuthUsecase) ValidateOrCreateUser(username, password string) (model.User, error) {
 	exists, err := u.userRepository.ExistsByName(username)
+	fmt.Println("validate")
 	if err != nil {
 		return model.User{}, err
 	}
@@ -77,6 +69,7 @@ func (u *authUsecase) ValidateOrCreateUser(username, password string) (model.Use
 		if err := u.userRepository.Create(newUser); err != nil {
 			return model.User{}, err
 		}
+		fmt.Println(newUser.Balance)
 
 		return *newUser, err
 	}

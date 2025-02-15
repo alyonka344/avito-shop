@@ -4,11 +4,10 @@ import (
 	"avito-shop/internal/mapper"
 	"avito-shop/internal/model"
 	"avito-shop/internal/repository"
-	"avito-shop/internal/usecase"
 	"fmt"
 )
 
-type userUsecase struct {
+type UserUsecase struct {
 	userRepository        repository.UserRepository
 	transactionRepository repository.TransactionRepository
 	purchaseRepository    repository.PurchaseRepository
@@ -17,14 +16,14 @@ type userUsecase struct {
 func NewUserUsecase(
 	userRepository repository.UserRepository,
 	transactionRepository repository.TransactionRepository,
-	purhaseRepository repository.PurchaseRepository) usecase.UserUsecase {
-	return &userUsecase{
+	purhaseRepository repository.PurchaseRepository) *UserUsecase {
+	return &UserUsecase{
 		userRepository:        userRepository,
 		transactionRepository: transactionRepository,
 		purchaseRepository:    purhaseRepository}
 }
 
-func (u userUsecase) GetInfo(userName string) (*model.UserInfo, error) {
+func (u UserUsecase) GetInfo(userName string) (*model.UserInfo, error) {
 	user, err := u.userRepository.GetByName(userName)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get user: %w", err)

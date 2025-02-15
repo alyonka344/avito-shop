@@ -3,27 +3,26 @@ package implementations
 import (
 	"avito-shop/internal/model"
 	"avito-shop/internal/repository"
-	"avito-shop/internal/usecase"
 	"errors"
 	"github.com/gofrs/uuid/v5"
 	"time"
 )
 
-type transactionUsecase struct {
+type TransactionUsecase struct {
 	userRepository        repository.UserRepository
 	transactionRepository repository.TransactionRepository
 }
 
 func NewTransactionUseCase(
 	userRepo repository.UserRepository,
-	transactionRepo repository.TransactionRepository) usecase.TransactionUsecase {
-	return &transactionUsecase{
+	transactionRepo repository.TransactionRepository) *TransactionUsecase {
+	return &TransactionUsecase{
 		userRepository:        userRepo,
 		transactionRepository: transactionRepo,
 	}
 }
 
-func (t transactionUsecase) TransferMoney(senderName string, recipientName string, amount int) error {
+func (t TransactionUsecase) TransferMoney(senderName string, recipientName string, amount int) error {
 	if amount <= 0 {
 		return errors.New("amount must be greater than zero")
 	}

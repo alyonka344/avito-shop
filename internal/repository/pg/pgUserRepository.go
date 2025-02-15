@@ -8,8 +8,6 @@ import (
 	"github.com/jmoiron/sqlx"
 )
 
-const initialBalance = 1000
-
 type PgUserRepository struct {
 	db *sqlx.DB
 }
@@ -20,7 +18,9 @@ func NewPgUserRepository(db *sqlx.DB) *PgUserRepository {
 
 func (r *PgUserRepository) Create(user *model.User) error {
 	tx, err := r.db.Beginx()
+	fmt.Println("begin1")
 	if err != nil {
+		fmt.Println("begin")
 		return err
 	}
 
@@ -37,17 +37,22 @@ func (r *PgUserRepository) Create(user *model.User) error {
 		}
 	}()
 
+	initialBalance := 1000
 	query, args, err := squirrel.
 		Insert("users").
 		Columns("username", "password", "balance").
 		Values(user.Username, user.Password, initialBalance).
 		PlaceholderFormat(squirrel.Dollar).
+		Suffix("RETURNING balance").
 		ToSql()
 	if err != nil {
+		fmt.Println(err)
 		return fmt.Errorf("failed to build query: %w", err)
 	}
 
-	_, err = tx.Exec(query, args...)
+	fmt.Println("a")
+	err = tx.QueryRowx(query, args...).Scan(&user.Balance)
+	fmt.Println(user.Balance)
 	if err != nil {
 		return fmt.Errorf("failed to execute query: %w", err)
 	}
