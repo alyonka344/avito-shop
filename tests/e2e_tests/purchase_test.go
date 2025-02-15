@@ -20,7 +20,6 @@ import (
 	"testing"
 )
 
-// TestConfig содержит тестовые данные
 type TestConfig struct {
 	server *httptest.Server
 }
@@ -32,6 +31,7 @@ func setupTestEnvironment(t *testing.T) *TestConfig {
 	_, b, _, _ := runtime.Caller(0)
 	projectRoot := filepath.Join(filepath.Dir(b), "../..")
 	migrationsPath := fmt.Sprintf("file://%s/migrations", projectRoot)
+
 	if err := initDB.RunMigrations(db, cfg.Database.Name, migrationsPath); err != nil {
 		log.Fatalf("Failed to run migrations: %v", err)
 	}
@@ -52,7 +52,6 @@ func TestPurchaseMerch(t *testing.T) {
 	cfg := setupTestEnvironment(t)
 	defer cfg.server.Close()
 
-	// Подготовка тестовых данных
 	testCases := []struct {
 		name            string
 		userName        string
@@ -82,96 +81,74 @@ func TestPurchaseMerch(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			// Создаем тестового пользователя
 			token := authenticateAndGetToken(t, cfg, tc.userName, tc.password)
 
-			// Выполняем запрос на покупку
-			resp := performPurchase(t, cfg.server.URL, tc.userName, tc.merchName, token)
+			resp := performPurchase(t, cfg.server.URL, tc.merchName, token)
 			assert.Equal(t, tc.expectedStatus, resp.StatusCode)
 
-			// Проверяем баланс после покупки
 			info := getInfo(t, cfg.server.URL, token)
 			assert.Equal(t, tc.expectedBalance, info.Coins)
 		})
 	}
 }
 
-//func TestTransferCoins(t *testing.T) {
-//	cfg := setupTestEnvironment(t)
-//	defer cfg.server.Close()
-//
-//	testCases := []struct {
-//		name                     string
-//		sender                   string
-//		recipient                string
-//		senderPassword           string
-//		recipientPassword        string
-//		amount                   int
-//		expectedStatus           int
-//		expectedSenderBalance    int
-//		expectedRecipientBalance int
-//	}{
-//		{
-//			name:                     "Успешный перевод монет",
-//			sender:                   "sender1",
-//			recipient:                "recipient1",
-//			senderPassword:           "password",
-//			recipientPassword:        "password",
-//			amount:                   500,
-//			expectedStatus:           http.StatusOK,
-//			expectedSenderBalance:    500,
-//			expectedRecipientBalance: 500,
-//		},
-//		{
-//			name:                     "Недостаточно средств для перевода",
-//			sender:                   "sender2",
-//			recipient:                "recipient2",
-//			senderPassword:           "password",
-//			recipientPassword:        "password",
-//			amount:                   500,
-//			expectedStatus:           http.StatusBadRequest,
-//			expectedSenderBalance:    100,
-//			expectedRecipientBalance: 0,
-//		},
-//	}
-//
-//	for _, tc := range testCases {
-//		t.Run(tc.name, func(t *testing.T) {
-//			// Создаем отправителя и получателя
-//			createTestUser(t, cfg.server.URL, tc.sender, tc.senderPassword)
-//			createTestUser(t, cfg.server.URL, tc.recipient, tc.recipientPassword)
-//
-//			// Выполняем перевод
-//			resp := performTransfer(t, cfg.server.URL, tc.sender, tc.recipient, tc.amount)
-//			assert.Equal(t, tc.expectedStatus, resp.StatusCode)
-//
-//			// Проверяем балансы после перевода
-//			senderUser := getInfo(t, cfg.server.URL, token)
-//			recipientUser := getInfo(t, cfg.server.URL, token)
-//
-//			assert.Equal(t, tc.expectedSenderBalance, senderUser.Balance)
-//			assert.Equal(t, tc.expectedRecipientBalance, recipientUser.Balance)
-//		})
-//	}
-//}
+func TestTransferCoins(t *testing.T) {
+	cfg := setupTestEnvironment(t)
+	defer cfg.server.Close()
 
-// Вспомогательные функции
+	testCases := []struct {
+		name                     string
+		sender                   string
+		recipient                string
+		senderPassword           string
+		recipientPassword        string
+		amount                   int
+		expectedStatus           int
+		expectedSenderBalance    int
+		expectedRecipientBalance int
+	}{
+		{
+			name:                     "Успешный перевод монет",
+			sender:                   "sender1",
+			recipient:                "recipient1",
+			senderPassword:           "password",
+			recipientPassword:        "password",
+			amount:                   500,
+			expectedStatus:           http.StatusOK,
+			expectedSenderBalance:    500,
+			expectedRecipientBalance: 1500,
+		},
+		{
+			name:                     "Недостаточно средств для перевода",
+			sender:                   "sender2",
+			recipient:                "recipient2",
+			senderPassword:           "password",
+			recipientPassword:        "password",
+			amount:                   1500,
+			expectedStatus:           http.StatusBadRequest,
+			expectedSenderBalance:    1000,
+			expectedRecipientBalance: 1000,
+		},
+	}
 
-//func createTestUser(t *testing.T, baseURL, username string, password string) {
-//	user := model.User{
-//		Username: username,
-//		Password: password,
-//	}
-//
-//	jsonBody, err := json.Marshal(user)
-//	require.NoError(t, err)
-//
-//	resp, err := http.Post(baseURL+"/api/auth", "application/json", bytes.NewBuffer(jsonBody))
-//	require.NoError(t, err)
-//	require.Equal(t, http.StatusOK, resp.StatusCode)
-//}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			senderToken := authenticateAndGetToken(t, cfg, tc.sender, tc.senderPassword)
+			recipientToken := authenticateAndGetToken(t, cfg, tc.recipient, tc.recipientPassword)
 
-func performPurchase(t *testing.T, baseURL, username, merchName string, token string) *http.Response {
+			resp := performTransfer(t, cfg.server.URL, tc.recipient, tc.amount, senderToken)
+			assert.Equal(t, tc.expectedStatus, resp.StatusCode)
+
+			senderUser := getInfo(t, cfg.server.URL, senderToken)
+			recipientUser := getInfo(t, cfg.server.URL, recipientToken)
+
+			assert.Equal(t, tc.expectedSenderBalance, senderUser.Coins)
+			assert.Equal(t, tc.expectedRecipientBalance, recipientUser.Coins)
+		})
+	}
+}
+
+func performPurchase(t *testing.T, baseURL, merchName string, token string) *http.Response {
 	req, err := http.NewRequest(http.MethodGet,
 		fmt.Sprintf("%s/api/buy/%s", baseURL, merchName),
 		nil)
@@ -228,18 +205,11 @@ func getInfo(t *testing.T, baseURL, token string) *model.UserInfo {
 	return &userInfo
 }
 
-//func getTestToken(username string) string {
-//	// В реальном приложении здесь должна быть логика получения токена
-//	return "test_token_" + username
-//}
-
 func authenticateAndGetToken(t *testing.T, env *TestConfig, username, password string) string {
-	// Create user credentials
 	user := model.User{Username: username, Password: password}
 	jsonBody, err := json.Marshal(user)
 	require.NoError(t, err)
 
-	// Send authentication request
 	req, err := http.NewRequest(http.MethodPost, fmt.Sprintf("%s/api/auth", env.server.URL), bytes.NewBuffer(jsonBody))
 	require.NoError(t, err)
 	req.Header.Set("Content-Type", "application/json")
@@ -249,7 +219,6 @@ func authenticateAndGetToken(t *testing.T, env *TestConfig, username, password s
 	require.NoError(t, err)
 	require.Equal(t, http.StatusOK, resp.StatusCode)
 
-	// Parse response to get token
 	var authResponse struct {
 		Token string `json:"token"`
 	}

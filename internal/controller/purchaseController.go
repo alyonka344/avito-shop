@@ -2,7 +2,6 @@ package controller
 
 import (
 	"avito-shop/internal/usecase"
-	"fmt"
 	"github.com/gin-gonic/gin"
 	"net/http"
 )
@@ -36,14 +35,16 @@ func (pc *PurchaseController) Buy(c *gin.Context) {
 	strUserName, ok := userName.(string)
 	if !ok {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to parse user ID"})
-		fmt.Println("smth")
 		return
 	}
 
 	err := pc.purchaseUsecase.BuyMerch(strUserName, item)
 	if err != nil {
+		if err.Error() == "insufficient balance" {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Insufficient balance"})
+			return
+		}
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to buy merch"})
-		fmt.Println("smth2")
 		return
 	}
 

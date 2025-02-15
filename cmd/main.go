@@ -30,4 +30,8 @@ func main() {
 	if err := application.Run(cfg.Server.Port); err != nil {
 		log.Fatalf("Failed to start server: %v", err)
 	}
+
+	if err := initDB.DownMigrations(db, cfg.Database.Name, "file://migrations"); err != nil {
+		log.Fatalf("Failed to run migrations: %v", err)
+	}
 }

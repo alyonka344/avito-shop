@@ -45,6 +45,10 @@ func (tc *TransactionController) SendCoin(c *gin.Context) {
 
 	err := tc.transactionUsecase.TransferMoney(strSenderName, req.Recipient, req.Amount)
 	if err != nil {
+		if err.Error() == "transaction failed" {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "transaction failed"})
+			return
+		}
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "transaction failed"})
 		return
 	}

@@ -44,7 +44,6 @@ func (u *AuthUsecase) Login(name, password string) (string, error) {
 
 func (u *AuthUsecase) ValidateOrCreateUser(username, password string) (model.User, error) {
 	exists, err := u.userRepository.ExistsByName(username)
-	fmt.Println("validate")
 	if err != nil {
 		return model.User{}, err
 	}

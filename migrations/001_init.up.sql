@@ -1,4 +1,9 @@
-CREATE TYPE status AS ENUM ('success', 'failure');
+DO $$
+    BEGIN
+        IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'status') THEN
+            CREATE TYPE status AS ENUM ('success', 'failure');
+        END IF;
+    END $$;
 
 CREATE TABLE IF NOT EXISTS users
 (

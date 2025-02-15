@@ -35,8 +35,33 @@ func RunMigrations(db *sqlx.DB, dbName string, sourceMigration string) error {
 	if err != nil {
 		return err
 	}
+	if err := m.Down(); err != nil && !errors.Is(err, migrate.ErrNoChange) {
+		return err
+	}
 
 	if err := m.Up(); err != nil && !errors.Is(err, migrate.ErrNoChange) {
+		return err
+	}
+
+	return nil
+}
+
+func DownMigrations(db *sqlx.DB, dbName string, sourceMigration string) error {
+	driver, err := postgres.WithInstance(db.DB, &postgres.Config{})
+	if err != nil {
+		return err
+	}
+
+	m, err := migrate.NewWithDatabaseInstance(
+		sourceMigration,
+		dbName,
+		driver,
+	)
+	if err != nil {
+		return err
+	}
+
+	if err := m.Down(); err != nil && !errors.Is(err, migrate.ErrNoChange) {
 		return err
 	}
 

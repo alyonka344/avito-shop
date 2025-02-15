@@ -2,7 +2,6 @@ package auth
 
 import (
 	"avito-shop/internal/usecase"
-	"fmt"
 	"github.com/gin-gonic/gin"
 	"net/http"
 )
@@ -18,15 +17,12 @@ func AuthMiddleware(authService AuthService, authUsecase usecase.AuthUsecase) gi
 		if tokenStr == "" {
 			var req AuthRequest
 			if err := c.ShouldBindJSON(&req); err != nil {
-				fmt.Println("token3")
 				c.JSON(http.StatusBadRequest, gin.H{"error": "Missing username or password"})
 				c.Abort()
 				return
 			}
-			fmt.Println("token")
 			user, err := authUsecase.ValidateOrCreateUser(req.Username, req.Password)
 			if err != nil {
-				fmt.Println("token4")
 				c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to validate or create user"})
 				c.Abort()
 				return

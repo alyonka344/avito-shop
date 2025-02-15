@@ -39,10 +39,7 @@ func (t TransactionUsecase) TransferMoney(senderName string, recipientName strin
 	if err != nil {
 		transaction.TransactionStatus = model.Failure
 		err = t.transactionRepository.Create(&transaction)
-		if err != nil {
-			return err
-		}
-		return err
+		return errors.New("transaction failed")
 	}
 
 	transaction.TransactionStatus = model.Success
