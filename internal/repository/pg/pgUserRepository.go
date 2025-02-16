@@ -8,6 +8,8 @@ import (
 	"github.com/jmoiron/sqlx"
 )
 
+const initialBalance = 1000
+
 type PgUserRepository struct {
 	db *sqlx.DB
 }
@@ -35,7 +37,6 @@ func (r *PgUserRepository) Create(user *model.User) error {
 		}
 	}()
 
-	initialBalance := 1000
 	query, args, err := squirrel.
 		Insert("users").
 		Columns("username", "password", "balance").
@@ -131,9 +132,12 @@ func (r *PgUserRepository) Transfer(senderName string, recipientName string, amo
 		return err
 	}
 
-	rowsAffected, _ := res.RowsAffected()
+	rowsAffected, err := res.RowsAffected()
 	if rowsAffected == 0 {
 		return errors.New("insufficient funds or user not found")
+	}
+	if err != nil {
+		return errors.New("failed to execute query")
 	}
 
 	addQuery, args, err := squirrel.

@@ -1,11 +1,10 @@
-package implementations
+package usecase_impl
 
 import (
 	"avito-shop/internal/auth"
 	"avito-shop/internal/model"
 	"avito-shop/internal/repository"
 	"errors"
-	"fmt"
 )
 
 type AuthUsecase struct {
@@ -68,7 +67,6 @@ func (u *AuthUsecase) ValidateOrCreateUser(username, password string) (model.Use
 		if err := u.userRepository.Create(newUser); err != nil {
 			return model.User{}, err
 		}
-		fmt.Println(newUser.Balance)
 
 		return *newUser, err
 	}

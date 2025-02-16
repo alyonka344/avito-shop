@@ -3,7 +3,7 @@ package unit_tests
 import (
 	"avito-shop/internal/mocks"
 	"avito-shop/internal/model"
-	"avito-shop/internal/usecase/implementations"
+	"avito-shop/internal/usecase/usecase_impl"
 	"errors"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
@@ -29,7 +29,7 @@ func TestAuthUsecase_ValidateOrCreateUserReturnsExistingUser(t *testing.T) {
 	mockUserRepo.EXPECT().ExistsByName("testuser").Return(true, nil)
 	mockUserRepo.EXPECT().GetByName("testuser").Return(existingUser, nil)
 
-	usecase := implementations.NewAuthUsecase(mockUserRepo, mockAuthService, mockHashService)
+	usecase := usecase_impl.NewAuthUsecase(mockUserRepo, mockAuthService, mockHashService)
 
 	user, err := usecase.ValidateOrCreateUser("testuser", "password")
 
@@ -51,7 +51,7 @@ func TestAuthUsecase_ValidateOrCreateUserWithEmptyUsername(t *testing.T) {
 	// act
 	mockUserRepo.EXPECT().ExistsByName("").Return(false, errors.New("username cannot be empty"))
 
-	usecase := implementations.NewAuthUsecase(mockUserRepo, mockAuthService, mockHashService)
+	usecase := usecase_impl.NewAuthUsecase(mockUserRepo, mockAuthService, mockHashService)
 
 	user, err := usecase.ValidateOrCreateUser("", "password")
 
@@ -78,7 +78,7 @@ func TestAuthUsecase_CreateNewUserIfNotExists(t *testing.T) {
 	mockHashService.EXPECT().HashPassword("password").Return("hashedpassword", nil)
 	mockUserRepo.EXPECT().Create(newUser).Return(nil)
 
-	usecase := implementations.NewAuthUsecase(mockUserRepo, mockAuthService, mockHashService)
+	usecase := usecase_impl.NewAuthUsecase(mockUserRepo, mockAuthService, mockHashService)
 
 	// act
 	user, err := usecase.ValidateOrCreateUser("newuser", "password")

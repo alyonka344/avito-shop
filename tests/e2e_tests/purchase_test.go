@@ -1,56 +1,16 @@
 package e2e_tests
 
 import (
-	"avito-shop/cmd/app"
-	"avito-shop/cmd/config"
-	"avito-shop/cmd/initDB"
-	"avito-shop/internal/model"
-	"avito-shop/seed"
-	"bytes"
-	"encoding/json"
-	"fmt"
+	"avito-shop/tests/e2e_tests/helpers"
 	_ "github.com/golang-migrate/migrate/v4/source/file"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
-	"log"
 	"net/http"
-	"net/http/httptest"
-	"path/filepath"
-	"runtime"
 	"testing"
 )
 
-type TestConfig struct {
-	server *httptest.Server
-}
-
-func setupTestEnvironment(t *testing.T) *TestConfig {
-	cfg := config.New()
-	db, err := initDB.InitDatabase(cfg)
-	require.NoError(t, err)
-	_, b, _, _ := runtime.Caller(0)
-	projectRoot := filepath.Join(filepath.Dir(b), "../..")
-	migrationsPath := fmt.Sprintf("file://%s/migrations", projectRoot)
-
-	if err := initDB.RunMigrations(db, cfg.Database.Name, migrationsPath); err != nil {
-		log.Fatalf("Failed to run migrations: %v", err)
-	}
-
-	if err := seed.ApplySeeds(db); err != nil {
-		log.Fatalf("Failed to apply seeds: %v", err)
-	}
-
-	application := app.New(db, cfg.SecretKey)
-	server := httptest.NewServer(application.Router)
-
-	return &TestConfig{
-		server: server,
-	}
-}
-
 func TestPurchaseMerch(t *testing.T) {
-	cfg := setupTestEnvironment(t)
-	defer cfg.server.Close()
+	cfg := helpers.SetupTestEnvironment(t)
+	defer cfg.Server.Close()
 
 	testCases := []struct {
 		name            string
@@ -60,6 +20,7 @@ func TestPurchaseMerch(t *testing.T) {
 		merchPrice      int
 		expectedStatus  int
 		expectedBalance int
+		numOfPurchases  int
 	}{
 		{
 			name:            "Успешная покупка мерча",
@@ -68,33 +29,38 @@ func TestPurchaseMerch(t *testing.T) {
 			merchName:       "pink-hoody",
 			expectedStatus:  http.StatusOK,
 			expectedBalance: 500,
+			numOfPurchases:  1,
 		},
 		{
 			name:            "Недостаточно средств",
 			userName:        "testUser2",
 			password:        "password",
-			merchName:       "test",
+			merchName:       "hoody",
 			expectedStatus:  http.StatusBadRequest,
-			expectedBalance: 1000,
+			expectedBalance: 100,
+			numOfPurchases:  4,
 		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			token := authenticateAndGetToken(t, cfg, tc.userName, tc.password)
+			token := helpers.AuthenticateAndGetToken(t, cfg, tc.userName, tc.password)
 
-			resp := performPurchase(t, cfg.server.URL, tc.merchName, token)
+			var resp *http.Response
+			for i := 0; i < tc.numOfPurchases; i++ {
+				resp = helpers.PerformPurchase(t, cfg.Server.URL, tc.merchName, token)
+			}
 			assert.Equal(t, tc.expectedStatus, resp.StatusCode)
 
-			info := getInfo(t, cfg.server.URL, token)
+			info := helpers.GetInfo(t, cfg.Server.URL, token)
 			assert.Equal(t, tc.expectedBalance, info.Coins)
 		})
 	}
 }
 
 func TestTransferCoins(t *testing.T) {
-	cfg := setupTestEnvironment(t)
-	defer cfg.server.Close()
+	cfg := helpers.SetupTestEnvironment(t)
+	defer cfg.Server.Close()
 
 	testCases := []struct {
 		name                     string
@@ -133,97 +99,17 @@ func TestTransferCoins(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			senderToken := authenticateAndGetToken(t, cfg, tc.sender, tc.senderPassword)
-			recipientToken := authenticateAndGetToken(t, cfg, tc.recipient, tc.recipientPassword)
+			senderToken := helpers.AuthenticateAndGetToken(t, cfg, tc.sender, tc.senderPassword)
+			recipientToken := helpers.AuthenticateAndGetToken(t, cfg, tc.recipient, tc.recipientPassword)
 
-			resp := performTransfer(t, cfg.server.URL, tc.recipient, tc.amount, senderToken)
+			resp := helpers.PerformTransfer(t, cfg.Server.URL, tc.recipient, tc.amount, senderToken)
 			assert.Equal(t, tc.expectedStatus, resp.StatusCode)
 
-			senderUser := getInfo(t, cfg.server.URL, senderToken)
-			recipientUser := getInfo(t, cfg.server.URL, recipientToken)
+			senderUser := helpers.GetInfo(t, cfg.Server.URL, senderToken)
+			recipientUser := helpers.GetInfo(t, cfg.Server.URL, recipientToken)
 
 			assert.Equal(t, tc.expectedSenderBalance, senderUser.Coins)
 			assert.Equal(t, tc.expectedRecipientBalance, recipientUser.Coins)
 		})
 	}
-}
-
-func performPurchase(t *testing.T, baseURL, merchName string, token string) *http.Response {
-	req, err := http.NewRequest(http.MethodGet,
-		fmt.Sprintf("%s/api/buy/%s", baseURL, merchName),
-		nil)
-	require.NoError(t, err)
-
-	req.Header.Set("Authorization", "Bearer "+token)
-
-	client := &http.Client{}
-	resp, err := client.Do(req)
-	require.NoError(t, err)
-
-	return resp
-}
-
-func performTransfer(t *testing.T, baseURL, recipient string, amount int, token string) *http.Response {
-	transferReq := struct {
-		Recipient string `json:"recipient"`
-		Amount    int    `json:"amount"`
-	}{
-		Recipient: recipient,
-		Amount:    amount,
-	}
-
-	jsonBody, err := json.Marshal(transferReq)
-	require.NoError(t, err)
-
-	req, err := http.NewRequest(http.MethodPost,
-		baseURL+"/api/sendCoin",
-		bytes.NewBuffer(jsonBody))
-	require.NoError(t, err)
-
-	req.Header.Set("Authorization", "Bearer "+token)
-
-	client := &http.Client{}
-	resp, err := client.Do(req)
-	require.NoError(t, err)
-
-	return resp
-}
-
-func getInfo(t *testing.T, baseURL, token string) *model.UserInfo {
-	req, err := http.NewRequest(http.MethodGet, fmt.Sprintf("%s/api/info", baseURL), nil)
-	require.NoError(t, err)
-	req.Header.Set("Authorization", "Bearer "+token)
-
-	client := &http.Client{}
-	resp, err := client.Do(req)
-	require.NoError(t, err)
-
-	var userInfo model.UserInfo
-	err = json.NewDecoder(resp.Body).Decode(&userInfo)
-	require.NoError(t, err)
-
-	return &userInfo
-}
-
-func authenticateAndGetToken(t *testing.T, env *TestConfig, username, password string) string {
-	user := model.User{Username: username, Password: password}
-	jsonBody, err := json.Marshal(user)
-	require.NoError(t, err)
-
-	req, err := http.NewRequest(http.MethodPost, fmt.Sprintf("%s/api/auth", env.server.URL), bytes.NewBuffer(jsonBody))
-	require.NoError(t, err)
-	req.Header.Set("Content-Type", "application/json")
-
-	client := &http.Client{}
-	resp, err := client.Do(req)
-	require.NoError(t, err)
-	require.Equal(t, http.StatusOK, resp.StatusCode)
-
-	var authResponse struct {
-		Token string `json:"token"`
-	}
-	err = json.NewDecoder(resp.Body).Decode(&authResponse)
-	require.NoError(t, err)
-
-	return authResponse.Token
 }

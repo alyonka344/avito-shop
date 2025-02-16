@@ -8,6 +8,8 @@ import (
 	"time"
 )
 
+const BearerString = "Bearer "
+
 type JwtService struct {
 	secretKey string
 }
@@ -26,9 +28,7 @@ func (j *JwtService) GenerateToken(user model.User) (string, error) {
 }
 
 func (j *JwtService) ValidateToken(tokenStr string) (string, error) {
-	if strings.HasPrefix(tokenStr, "Bearer ") {
-		tokenStr = strings.TrimPrefix(tokenStr, "Bearer ")
-	}
+	tokenStr = strings.TrimPrefix(tokenStr, BearerString)
 
 	token, err := jwt.Parse(tokenStr, func(token *jwt.Token) (interface{}, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {

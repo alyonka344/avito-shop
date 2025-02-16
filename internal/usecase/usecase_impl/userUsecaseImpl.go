@@ -1,4 +1,4 @@
-package implementations
+package usecase_impl
 
 import (
 	"avito-shop/internal/mapper"

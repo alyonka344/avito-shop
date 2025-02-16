@@ -1,4 +1,4 @@
-package implementations
+package usecase_impl
 
 import (
 	"avito-shop/internal/model"
@@ -39,6 +39,9 @@ func (t TransactionUsecase) TransferMoney(senderName string, recipientName strin
 	if err != nil {
 		transaction.TransactionStatus = model.Failure
 		err = t.transactionRepository.Create(&transaction)
+		if err != nil {
+			return errors.New("transaction not added")
+		}
 		return errors.New("transaction failed")
 	}
 

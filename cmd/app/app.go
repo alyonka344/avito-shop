@@ -5,7 +5,7 @@ import (
 	"avito-shop/internal/auth/jwt"
 	"avito-shop/internal/controller"
 	"avito-shop/internal/repository/pg"
-	"avito-shop/internal/usecase/implementations"
+	"avito-shop/internal/usecase/usecase_impl"
 	"github.com/gin-gonic/gin"
 	"github.com/jmoiron/sqlx"
 )
@@ -51,10 +51,10 @@ type services struct {
 }
 
 type useCases struct {
-	auth        *implementations.AuthUsecase
-	user        *implementations.UserUsecase
-	transaction *implementations.TransactionUsecase
-	purchase    *implementations.PurchaseUsecase
+	auth        *usecase_impl.AuthUsecase
+	user        *usecase_impl.UserUsecase
+	transaction *usecase_impl.TransactionUsecase
+	purchase    *usecase_impl.PurchaseUsecase
 }
 
 func initRepositories(db *sqlx.DB) *repositories {
@@ -75,9 +75,9 @@ func initServices(secretKey string) *services {
 
 func initUseCases(r *repositories, s *services) *useCases {
 	return &useCases{
-		auth:        implementations.NewAuthUsecase(r.user, s.auth, s.hash),
-		user:        implementations.NewUserUsecase(r.user, r.transaction, r.purchase),
-		transaction: implementations.NewTransactionUseCase(r.user, r.transaction),
-		purchase:    implementations.NewPurchaseUsecase(r.user, r.merch, r.purchase),
+		auth:        usecase_impl.NewAuthUsecase(r.user, s.auth, s.hash),
+		user:        usecase_impl.NewUserUsecase(r.user, r.transaction, r.purchase),
+		transaction: usecase_impl.NewTransactionUseCase(r.user, r.transaction),
+		purchase:    usecase_impl.NewPurchaseUsecase(r.user, r.merch, r.purchase),
 	}
 }
