@@ -27,7 +27,7 @@ func SetupTestEnvironment(t *testing.T) *TestConfig {
 	db, err := initDB.InitDatabase(cfg)
 	require.NoError(t, err)
 	_, b, _, _ := runtime.Caller(0)
-	projectRoot := filepath.Join(filepath.Dir(b), "../..")
+	projectRoot := filepath.Join(filepath.Dir(b), "../../..")
 	migrationsPath := fmt.Sprintf("file://%s/migrations", projectRoot)
 
 	if err := initDB.RunMigrations(db, cfg.Database.Name, migrationsPath); err != nil {
